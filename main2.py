@@ -18,16 +18,6 @@ class PlayerBase(ABC):
     def dice_roll(self, game, dice_instance):
         pass
 
-    #_roll_and_moveメソッドはPlayerクラスとCPUクラスの両方で使われるため、1つにまとめる
-    #dice_instanceでサイコロを振って出た目の値を渡す
-    def _roll_and_move(self, game, dice_instance):
-        #dice_instanceオブジェクトのrollメソッドを呼び出してサイコロを振る
-        dice = dice_instance.roll()
-        print(f"{self.name}の出た目：{dice}")
-        #gameオブジェクトのsetPositionメソッドで、マスを進める
-        game.setPosition(self, dice)
-        return dice
-
 #PlayerBaseの実装クラス
 class Player(PlayerBase):
     def __init__(self, name: str):
@@ -39,16 +29,11 @@ class Player(PlayerBase):
         print(f"人間: {self.name}の番です。")
         input("サイコロを振るにはエンターキーを押してください。")
         
-        #サイコロを振って、コマを進める(コマを戻す)
-        dice_result_1 = self._roll_and_move(game, dice_instance)
-        
-        if dice_result_1 == 5:
-            print("もう一回サイコロを振ります！")
-            
-            #サイコロを振って、コマを進める(コマを戻す)
-            self._roll_and_move(game, dice_instance)
-        
-        #サイコロをふる人の順番を進める
+        # dice_instanceから最終的な移動量を取得する
+        dice_result = dice_instance.roll_and_get_effected_value()
+
+        # ゲームクラスに移動を任せる
+        game.setPosition(self, dice_result)
         game.countup()
 
 #CPU用
@@ -62,33 +47,78 @@ class CPU(PlayerBase):
         #inputの代わりに待ちを発生させる
         time.sleep(1)
         
-        dice_result_1 = self._roll_and_move(game, dice_instance)
-        
-        if dice_result_1 == 5:
-            print("もう一回サイコロを振ります！")
-            self._roll_and_move(game, dice_instance)
-        
+        # dice_instanceから最終的な移動量を取得する
+        dice_result = dice_instance.roll_and_get_effected_value()
+
+        # ゲームクラスに移動を任せる
+        game.setPosition(self, dice_result)
         game.countup()
 
 #サイコロの目の値を決める
 class Dice():
-    #valueの値はtest.pyで決めている。
-    def __init__(self, value=None):
-        self.value = value
+    def __init__(self, min_val=1, max_val=6, value=None):
+        self.min_val = min_val
+        self.max_val = max_val
+        #①valueをリストとして扱う
+        #②何も渡されていない状態かどうかをチェックする。
+            #valueがNoneであれば、self.value_listにはNoneが代入される。
+            #valueがNoneでなければ、次の条件へ進む。
+        #③valueがすでにリストかどうかチェックする。
+        self.value_list = value if isinstance(value, list) else [value] if value is not None else None
+        #テスト用として固定されたサイコロの目を順番に取得する
         self.index = 0
-    
-    #ランダムじゃない場合の処理
+        self.current_value = None
+
     def roll(self):
-        #valueが複数個ある場合の処理
-        if self.value is not None:
-            if self.index >= len(self.value):
+        # 固定値が設定されている場合
+        if self.value_list:
+            if self.index >= len(self.value_list):
                 self.index = 0 # リストの最後まで行ったら最初に戻る
-            value = self.value[self.index]
+            dice_result = self.value_list[self.index]
             self.index += 1
-            return value
+            self.current_value = dice_result
+            return dice_result
         else:
-            #ランダムな場合の処理
-            return random.randint(1, 6)
+            # ランダムな値の場合
+            self.current_value = random.randint(self.min_val, self.max_val)
+            return self.current_value
+
+    def _roll(self):
+        # 内部で使われる、ランダムまたは固定値を返すメソッド
+        if self.value_list:
+            if self.index >= len(self.value_list):
+                self.index = 0
+            dice_result = self.value_list[self.index]
+            self.index += 1
+            return dice_result
+        else:
+            return random.randint(self.min_val, self.max_val)
+
+    
+    """サイコロを振り、出た目と効果を適用した最終的な移動量を返す。"""
+    def roll_and_get_effected_value(self):
+        
+        total_move = 0
+        #1回目で出たサイコロの目を取得
+        first_roll = self._roll()
+        print(f"出た目：{first_roll}")
+        
+        if first_roll == 3:
+            total_move = -3
+            return total_move
+
+        #コマを進める
+        total_move += first_roll
+        
+        if first_roll == 5:
+            print("もう一回サイコロを振ります！")
+            #2回目にサイコロを振る
+            second_roll = self._roll()
+            print(f"出た目：{second_roll}")
+            #出た目の分、マスに加算
+            total_move += second_roll
+        #コマを進める
+        return total_move
 
 class Game():
     def __init__(self, players, goal: int):
@@ -135,25 +165,20 @@ class Game():
         self.count += 1
 
     #コマの進みを管理する
-    def setPosition(self, player, dice):
+    def setPosition(self, player, total_move):
         for p in self.players:
-            #辞書型のplayersから'player'を取得する
             if p.get('player') == player:
-                #サイコロの目が3以外ならコマを進める
-                if dice != 3:
-                    p['position'] += dice
-                    #サイコロの目が３ならコマを戻す
-                else:
-                    p['position'] -= dice
+                # 最終的な移動量を使ってコマを進める
+                p['position'] += total_move
                 
                 print(f"{p.get('player').name}のコマの状態：{p.get('position')}")
                 
-                #ゴールを過ぎたらコマを戻す
+                # ゴールを過ぎたらコマを戻す
                 if self.goal < p.get('position'):
                     tmp = p['position'] - self.goal
                     p['position'] = self.goal - tmp
                     print(f"{tmp}マス戻ります。")
-                break # プレイヤーを見つけたらループを抜ける
+                break
 #main関数
 def main() -> None:
     print("すごろくゲームを開始します。")
@@ -163,6 +188,7 @@ def main() -> None:
         CPU("CPU"),
         CPU("CPU2")
     ]
+    
     dice = Dice()
     #Gameクラスの引数: players, goal
     game = Game(players, 20)

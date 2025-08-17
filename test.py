@@ -57,7 +57,6 @@ class Test_Game(unittest.TestCase):
     """
     setUpメソッドで初期化を行う
     """
-
     def setUp(self):
         self.players_list = [
             Player("Yuki"),
@@ -81,7 +80,6 @@ class Test_Game(unittest.TestCase):
         player_list = [d['player'] for d in self.game.players]
         position_list = [d['position'] for d in self.game.players]
         #要素数のチェック
-        #本当にチェックできてる？
         self.assertEqual(len(player_list), len(position_list))
     
     """
@@ -89,36 +87,42 @@ class Test_Game(unittest.TestCase):
     """
     def test_player_num_true(self):
         #2名の場合のチェック
+        #players_2 = [Player("Yuki"), Player("Yui")]
+        # 準備
         players_2 = [Player("Yuki"), Player("Yui")]
-        game_2 = Game(players_2, 20)
-        self.assertGreaterEqual(len(game_2.players), 2)
-        self.assertLessEqual(len(game_2.players), 4)
+        players_3 = [Player("Yuki"), Player("Yui"), CPU("CPU")]
+        players_4 = [Player("Yuki"), Player("Yui"), CPU("CPU"), CPU("CPU2")]
+
+        game1 = Game(players_2, 20)
+        game2 = Game(players_3, 20)
+        game3 = Game(players_4, 20)
+        # 発火
+
+        #game_2 = Game(players_2, 20)
+        self.assertGreaterEqual(len(game1.players), 2)
+        self.assertLessEqual(len(game1.players), 4)
         #3名の場合のチェック
-        players_list3 = [Player("Yuki"), Player("Yui"), CPU("CPU")]
-        game_3 = Game(players_list3, 20)
-        self.assertGreaterEqual(len(game_3.players), 2)
-        self.assertLessEqual(len(game_3.players), 4)
+       #players_list3 = [Player("Yuki"), Player("Yui"), CPU("CPU")]
+        #game_3 = Game(players_list3, 20)
+        self.assertGreaterEqual(len(game2.players), 2)
+        self.assertLessEqual(len(game2.players), 4)
         #4名の場合のチェック
-        self.assertGreaterEqual(len(self.game.players), 2)
-        self.assertLessEqual(len(self.game.players), 4)
+        self.assertGreaterEqual(len(game3.players), 2)
+        self.assertLessEqual(len(game3.players), 4)
 
     """
     対戦人数が制約を満たさない場合、エラー処理が実行されるかどうかチェックする
     """
+    # test_player_num_false メソッドの正しい書き方
     def test_player_num_false(self):
-        #エラーハンドリング
-        #1名の場合のチェック
+        players_1 = [Player("Yuki")]
+        players_5 = [Player("Yuki"), Player("Yui"), CPU("CPU"), CPU("CPU2"), CPU("CPU3")]
+
         with self.assertRaises(ValueError):
-            players_list1 = [Player("Yuki")]
-            Game(players_list1, 20)
-        
-        #エラーハンドリング
-        #5名の場合のチェック
+            Game(players_1, 20)
+    
         with self.assertRaises(ValueError):
-            players_list5 = [
-                Player("Yuki"), Player("Yui"), CPU("CPU"), CPU("CPU2"), CPU("CPU3")
-            ]
-            Game(players_list5, 20)
+            Game(players_5, 20)
     
     """
     ゴール値が制約を満たしているかどうか、チェックする
@@ -170,34 +174,40 @@ class Test_Game(unittest.TestCase):
     プレイヤー用
     """
     def test_output_player(self):
-        sys.stdin = io.StringIO('\n') #プロンプト上でエンターを押下する作業を自動化する
-        #標準出力系の処理
+        sys.stdin = io.StringIO('\n') 
         captured_output = io.StringIO() 
         sys.stdout = captured_output
-        #dice_roll系の処理
-        test_dice = Dice()
+
+        # Diceインスタンスにテスト用の固定値を設定
+        test_dice = Dice(value=[5, 2])
         player = Player("Test")
         player.dice_roll(self.game, test_dice)
-        # キャプチャ出力用
-        # 標準出力した内容を取得する
+        
         output = captured_output.getvalue()
-        self.assertIn("Testの番です。", output)
-        self.assertIn("Testの出た目：", output)
-        self.assertIn("サイコロを振るにはエンターキーを押してください。", output)
 
-    """
-    テキストがプロンプト上に適切な形で表示されているかどうか、チェックする
-    CPU用
-    """
+        # 出力内容が変更されたため、アサートも変更する
+        self.assertIn("人間: Testの番です。", output)
+        self.assertIn("サイコロを振るにはエンターキーを押してください。", output)
+        # 「Testの出た目」という文字列はもう表示されない
+        # 代わりに「出た目：」という文字列が表示される
+        self.assertIn("出た目：5", output)
+        self.assertIn("もう一回サイコロを振ります！", output)
+        self.assertIn("出た目：2", output)
+
+
+    """プロンプト上のテキストが適切な形式で表示されているか、チェックする"""
     def test_output_cpu(self):
         captured_output = io.StringIO()
         sys.stdout = captured_output
-        test_dice = Dice()
+        
+        test_dice = Dice(value=[3])
         cpu = CPU("TestCPU")
         cpu.dice_roll(self.game, test_dice)
+        
         output = captured_output.getvalue()
-        self.assertIn("CPUの番です。", output)
-        self.assertIn("TestCPUの出た目：", output)
+        
+        self.assertIn("CPU: TestCPUの番です。", output)
+        self.assertIn("出た目：3", output)
 
     """
     サイコロを振って3の目が出たら、3コマ戻す処理ができているかどうか、チェックする
@@ -235,26 +245,38 @@ class Test_Game(unittest.TestCase):
         #23 - 20 = 3
         #20 - 3  = 17
         self.assertEqual(game.players[0]['position'], 17)
-    
-    """
-    サイコロを振って5の目が出た場合、もう一度サイコロを振る処理ができているかどうか、チェックする
-    """
-    def test_lucky_dice(self):
-        #Gameクラスをnewする
-        game = Game(self.players_list, 20)
-        #Yukiのpositionの初期値を0とする
-        game.players[0]['position'] = 0
-        #Diceをnewする
-        #サイコロの目を振って出た目(1回目):5
-        #サイコロの目を振って出た目(2回目):8
-        test_dice = Dice(value=[5, 8])
-        #現在のプレイヤー(orCPU)の情報を取得する
-        player = game.current_player()
-        #dice_rollメソッドを呼び出し、サイコロを投げる
-        player.dice_roll(game, test_dice)
-        #サイコロを振って5の目が出た場合、もう一度サイコロを振る処理ができているかどうか、チェックする
-        #5 + 8 = 13
-        self.assertEqual(game.players[0]['position'], 13)
+
+class TestDice(unittest.TestCase):
+
+    def setUp(self):
+        """各テストメソッドが実行される前に呼び出す。"""
+        self.dice = Dice()
+
+
+    """サイコロの出目が3以外の場合、マスを戻すことをテストする。"""
+    def test_effect_on_three(self):
+        # テスト用の固定値として3を設定
+        self.dice = Dice(value=[3])
+        result = self.dice.roll_and_get_effected_value()
+        # 最終的な結果が-3であることを確認
+        self.assertEqual(result, -3)
+
+    """サイコロの出目が3以外の場合、そのままの値を返すことをテストする。"""
+    def test_effect_not_change(self):
+    # 特殊な効果がない出目として「4」を設定する
+        self.dice = Dice(value=[4])
+        result = self.dice.roll_and_get_effected_value()
+    # 結果がそのまま4であることを確認
+        self.assertEqual(result, 4)
+
+
+    """サイコロの出目が5の場合、もう一度振って合計値を返すことをテストする。"""
+    def test_roll_again_on_five(self):
+        # テスト用の固定値として[5, 4]を設定
+        self.dice = Dice(value=[5, 4])
+        result = self.dice.roll_and_get_effected_value()
+        # 5 + 4 = 9 であることを確認
+        self.assertEqual(result, 9)
 
 if __name__ == '__main__':
     unittest.main()
