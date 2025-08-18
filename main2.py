@@ -30,7 +30,7 @@ class Player(PlayerBase):
         input("サイコロを振るにはエンターキーを押してください。")
         
         # dice_instanceから最終的な移動量を取得する
-        dice_result = dice_instance.roll_and_get_effected_value()
+        dice_result = dice_instance.get_effected_value()
 
         # ゲームクラスに移動を任せる
         game.setPosition(self, dice_result)
@@ -48,7 +48,7 @@ class CPU(PlayerBase):
         time.sleep(1)
         
         # dice_instanceから最終的な移動量を取得する
-        dice_result = dice_instance.roll_and_get_effected_value()
+        dice_result = dice_instance.get_effected_value()
 
         # ゲームクラスに移動を任せる
         game.setPosition(self, dice_result)
@@ -61,19 +61,29 @@ class Dice():
         self.max_val = max_val
         #①valueをリストとして扱う
         #②何も渡されていない状態かどうかをチェックする。
-            #valueがNoneであれば、self.value_listにはNoneが代入される。
-            #valueがNoneでなければ、次の条件へ進む。
+            #isinstance(value, list)が存在する場合は、それを格納。elseであれば次の条件分岐。
+            #valueがNoneでなければ、valueを格納。それ以外はNone。
         #③valueがすでにリストかどうかチェックする。
-        self.value_list = value if isinstance(value, list) else [value] if value is not None else None
+        if value != None:
+            if value == isinstance(value, list):
+                self.value_list = value
+            elif value != [value]:
+                self.value_list = [value]
+        else:
+            self.value = None
+        
         #テスト用として固定されたサイコロの目を順番に取得する
         self.index = 0
         self.current_value = None
 
+    """
+    サイコロの目の値を管理する。
+    """
     def roll(self):
         # 固定値が設定されている場合
         if self.value_list:
             if self.index >= len(self.value_list):
-                self.index = 0 # リストの最後まで行ったら最初に戻る
+                self.index = 0 # valueリストが最後の要素まで行ったら最初に戻る
             dice_result = self.value_list[self.index]
             self.index += 1
             self.current_value = dice_result
@@ -83,8 +93,10 @@ class Dice():
             self.current_value = random.randint(self.min_val, self.max_val)
             return self.current_value
 
+    """
+    内部で使われる、ランダムまたは固定値を返す。
+    """
     def _roll(self):
-        # 内部で使われる、ランダムまたは固定値を返すメソッド
         if self.value_list:
             if self.index >= len(self.value_list):
                 self.index = 0
@@ -95,21 +107,29 @@ class Dice():
             return random.randint(self.min_val, self.max_val)
 
     
-    """サイコロを振り、出た目と効果を適用した最終的な移動量を返す。"""
-    def roll_and_get_effected_value(self):
+    """
+    サイコロを振り、出た目と効果を適用した最終的な移動量を返す。
+    """
+    def get_effected_value(self):
         
         total_move = 0
         #1回目で出たサイコロの目を取得
         first_roll = self._roll()
         print(f"出た目：{first_roll}")
         
+        """
+        3の目が出たら、マスを戻す
+        """
         if first_roll == 3:
             total_move = -3
             return total_move
 
-        #コマを進める
+        #マスを進める
         total_move += first_roll
         
+        """
+        5の目が出たら、2回サイコロを振る
+        """
         if first_roll == 5:
             print("もう一回サイコロを振ります！")
             #2回目にサイコロを振る

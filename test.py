@@ -257,7 +257,7 @@ class TestDice(unittest.TestCase):
     def test_effect_on_three(self):
         # テスト用の固定値として3を設定
         self.dice = Dice(value=[3])
-        result = self.dice.roll_and_get_effected_value()
+        result = self.dice.get_effected_value()
         # 最終的な結果が-3であることを確認
         self.assertEqual(result, -3)
 
@@ -265,7 +265,7 @@ class TestDice(unittest.TestCase):
     def test_effect_not_change(self):
     # 特殊な効果がない出目として「4」を設定する
         self.dice = Dice(value=[4])
-        result = self.dice.roll_and_get_effected_value()
+        result = self.dice.get_effected_value()
     # 結果がそのまま4であることを確認
         self.assertEqual(result, 4)
 
@@ -274,7 +274,7 @@ class TestDice(unittest.TestCase):
     def test_roll_again_on_five(self):
         # テスト用の固定値として[5, 4]を設定
         self.dice = Dice(value=[5, 4])
-        result = self.dice.roll_and_get_effected_value()
+        result = self.dice.get_effected_value()
         # 5 + 4 = 9 であることを確認
         self.assertEqual(result, 9)
 
