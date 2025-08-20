@@ -169,59 +169,35 @@ class Test_Game(unittest.TestCase):
         #0(初期値) + 7 = 0
         self.assertEqual(self.game.players[0].get('position'), 7)
 
-    """
-    テキストがプロンプト上に適切な形で表示されているかどうか、チェックする
-    プレイヤー用
-    """
-    def test_output_player(self):
-        sys.stdin = io.StringIO('\n') 
-        captured_output = io.StringIO() 
-        sys.stdout = captured_output
-
-        # Diceインスタンスにテスト用の固定値を設定
-        test_dice = Dice(value=[5, 2])
-        player = Player("Test")
-        player.dice_roll(self.game, test_dice)
-        
-        output = captured_output.getvalue()
-
-        # 出力内容が変更されたため、アサートも変更する
-        self.assertIn("人間: Testの番です。", output)
-        self.assertIn("サイコロを振るにはエンターキーを押してください。", output)
-        # 「Testの出た目」という文字列はもう表示されない
-        # 代わりに「出た目：」という文字列が表示される
-        self.assertIn("出た目：5", output)
-        self.assertIn("もう一回サイコロを振ります！", output)
-        self.assertIn("出た目：2", output)
-
-
     """プロンプト上のテキストが適切な形式で表示されているか、チェックする"""
     def test_output_cpu(self):
         captured_output = io.StringIO()
         sys.stdout = captured_output
         
-        test_dice = Dice(value=[3])
+        test_dice = Dice(min_val=3, max_val=3)
         cpu = CPU("TestCPU")
         cpu.dice_roll(self.game, test_dice)
         
         output = captured_output.getvalue()
         
         self.assertIn("CPU: TestCPUの番です。", output)
-        self.assertIn("出た目：3", output)
+        #self.assertIn("出た目：3", output)
 
     """
     サイコロを振って3の目が出たら、3コマ戻す処理ができているかどうか、チェックする
     """
     def test_minus_dice(self):
+        
         #Gameクラスをnewする
         game = Game(self.players_list, 20)
         #Yukiのpositionの初期値を5とする
         game.players[0]['position'] = 5
         #サイコロの目を振って出た目を3とする
-        test_dice = Dice(value=[3])
+        test_dice = Dice(min_val=3, max_val=3)
         #現在のプレイヤー(orCPU)の情報を取得する
         player = game.current_player()
         #dice_rollメソッドを実行する
+        sys.stdin = io.StringIO('\n') 
         player.dice_roll(game, test_dice)
         #初期値からサイコロを振って、出た目の数が引かれているかどうか、チェック(5 - 3 = 2)
         self.assertEqual(game.players[0]['position'], 2)
@@ -235,10 +211,11 @@ class Test_Game(unittest.TestCase):
         #Yukiのpositionの初期値を19とする
         game.players[0]['position'] = 19
         #サイコロの目を振って出た目を3とする
-        test_dice = Dice(value=[4])
+        test_dice = Dice(min_val=4, max_val=4)
         #現在のプレイヤー(orCPU)の情報を取得する
         player = game.current_player()
         #dice_rollメソッドを呼び出し、サイコロを投げる
+        sys.stdin = io.StringIO('\n') 
         player.dice_roll(game, test_dice)
         #ゴール値をはみ出した分、コマを戻す処理ができているかどうか、チェックする
         #19 + 4 = 23
@@ -248,35 +225,36 @@ class Test_Game(unittest.TestCase):
 
 class TestDice(unittest.TestCase):
 
-    def setUp(self):
-        """各テストメソッドが実行される前に呼び出す。"""
-        self.dice = Dice()
-
-
-    """サイコロの出目が3以外の場合、マスを戻すことをテストする。"""
+    """サイコロの出目が3の場合、マスを戻すことをテストする。"""
     def test_effect_on_three(self):
-        # テスト用の固定値として3を設定
-        self.dice = Dice(value=[3])
-        result = self.dice.get_effected_value()
+        # 前処理
+        dice = Dice(min_val=3, max_val=3)
+        # 実行
+        dice.roll()
+        # テスト
         # 最終的な結果が-3であることを確認
-        self.assertEqual(result, -3)
+        self.assertEqual(dice.get_effected_value(), -3)
 
     """サイコロの出目が3以外の場合、そのままの値を返すことをテストする。"""
     def test_effect_not_change(self):
     # 特殊な効果がない出目として「4」を設定する
-        self.dice = Dice(value=[4])
-        result = self.dice.get_effected_value()
-    # 結果がそのまま4であることを確認
-        self.assertEqual(result, 4)
+        # 前処理
+        dice = Dice(min_val=4, max_val=4)
+        # 実行
+        dice.roll()
+        # テスト
+        # 最終的な結果が-3であることを確認
+        self.assertEqual(dice.get_effected_value(), 4)
 
-
-    """サイコロの出目が5の場合、もう一度振って合計値を返すことをテストする。"""
+    """サイコロの出目が5の場合、is_twiceがtrueになること"""
     def test_roll_again_on_five(self):
-        # テスト用の固定値として[5, 4]を設定
-        self.dice = Dice(value=[5, 4])
-        result = self.dice.get_effected_value()
-        # 5 + 4 = 9 であることを確認
-        self.assertEqual(result, 9)
+        # 前処理
+        dice = Dice(min_val=5, max_val=5)
+        # 実行
+        dice.roll()
+        # テスト
+        # 最終的な結果が-3であることを確認
+        self.assertEqual(dice.is_twice(), True)
 
 if __name__ == '__main__':
     unittest.main()

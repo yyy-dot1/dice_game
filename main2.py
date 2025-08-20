@@ -1,7 +1,34 @@
 import random
 import time
 from abc import ABC, abstractmethod
+#サイコロの目の値を決める
+class Dice():
+    def __init__(self, min_val=1, max_val=6):
+        self.min_val = min_val
+        self.max_val = max_val
+        self.current_value: int = -1
 
+    """
+    サイコロの目の値を管理する。
+    """
+    def roll(self):
+        self.current_value = random.randint(self.min_val, self.max_val)
+        return self.current_value
+    
+    def is_twice(self):
+        return self.current_value == 5
+    
+    """
+    サイコロを振り、出た目と効果を適用した最終的な移動量を返す。
+    """
+    def get_effected_value(self):
+        """
+        3の目が出たら、マスを戻す
+        """
+        if self.current_value == 3:
+            return -self.current_value
+        return self.current_value
+    
 #継承基底クラス
 class PlayerBase(ABC):
     def __init__(self, name: str):
@@ -18,6 +45,8 @@ class PlayerBase(ABC):
     def dice_roll(self, game, dice_instance):
         pass
 
+    ## def __dece_role(self):
+
 #PlayerBaseの実装クラス
 class Player(PlayerBase):
     def __init__(self, name: str):
@@ -25,16 +54,19 @@ class Player(PlayerBase):
 
 #人間用
 # dice_rollメソッドを宣言する
-    def dice_roll(self, game, dice_instance):
+    def dice_roll(self, game, dice: Dice):
         print(f"人間: {self.name}の番です。")
         input("サイコロを振るにはエンターキーを押してください。")
         
         # dice_instanceから最終的な移動量を取得する
-        dice_result = dice_instance.get_effected_value()
-
-        # ゲームクラスに移動を任せる
-        game.setPosition(self, dice_result)
-        game.countup()
+        dice.roll()
+        if dice.is_twice():
+            game.setPosition(self, dice.get_effected_value())
+            self.dice_roll()
+        else:
+            # ゲームクラスに移動を任せる
+            game.setPosition(self, dice.get_effected_value())
+            game.countup()
 
 #CPU用
 # dice_rollメソッドを宣言する
@@ -42,103 +74,22 @@ class CPU(PlayerBase):
     def __init__(self, name: str):
         super().__init__(name)
 
-    def dice_roll(self, game, dice_instance):
+    def dice_roll(self, game, dice):
         print(f"CPU: {self.name}の番です。")
         #inputの代わりに待ちを発生させる
         time.sleep(1)
         
         # dice_instanceから最終的な移動量を取得する
-        dice_result = dice_instance.get_effected_value()
-
-        # ゲームクラスに移動を任せる
-        game.setPosition(self, dice_result)
-        game.countup()
-
-#サイコロの目の値を決める
-class Dice():
-    def __init__(self, min_val=1, max_val=6, value=None):
-        self.min_val = min_val
-        self.max_val = max_val
-        #①valueをリストとして扱う
-        #②何も渡されていない状態かどうかをチェックする。
-            #isinstance(value, list)が存在する場合は、それを格納。elseであれば次の条件分岐。
-            #valueがNoneでなければ、valueを格納。それ以外はNone。
-        #③valueがすでにリストかどうかチェックする。
-        if value != None:
-            if value == isinstance(value, list):
-                self.value_list = value
-            elif value != [value]:
-                self.value_list = [value]
+        dice.roll()
+        if dice.is_twice():
+            game.setPosition(self, dice.get_effected_value())
+            self.dice_roll()
         else:
-            self.value = None
-        
-        #テスト用として固定されたサイコロの目を順番に取得する
-        self.index = 0
-        self.current_value = None
+            # ゲームクラスに移動を任せる
+            game.setPosition(self, dice.get_effected_value())
+            game.countup()
 
-    """
-    サイコロの目の値を管理する。
-    """
-    def roll(self):
-        # 固定値が設定されている場合
-        if self.value_list:
-            if self.index >= len(self.value_list):
-                self.index = 0 # valueリストが最後の要素まで行ったら最初に戻る
-            dice_result = self.value_list[self.index]
-            self.index += 1
-            self.current_value = dice_result
-            return dice_result
-        else:
-            # ランダムな値の場合
-            self.current_value = random.randint(self.min_val, self.max_val)
-            return self.current_value
 
-    """
-    内部で使われる、ランダムまたは固定値を返す。
-    """
-    def _roll(self):
-        if self.value_list:
-            if self.index >= len(self.value_list):
-                self.index = 0
-            dice_result = self.value_list[self.index]
-            self.index += 1
-            return dice_result
-        else:
-            return random.randint(self.min_val, self.max_val)
-
-    
-    """
-    サイコロを振り、出た目と効果を適用した最終的な移動量を返す。
-    """
-    def get_effected_value(self):
-        
-        total_move = 0
-        #1回目で出たサイコロの目を取得
-        first_roll = self._roll()
-        print(f"出た目：{first_roll}")
-        
-        """
-        3の目が出たら、マスを戻す
-        """
-        if first_roll == 3:
-            total_move = -3
-            return total_move
-
-        #マスを進める
-        total_move += first_roll
-        
-        """
-        5の目が出たら、2回サイコロを振る
-        """
-        if first_roll == 5:
-            print("もう一回サイコロを振ります！")
-            #2回目にサイコロを振る
-            second_roll = self._roll()
-            print(f"出た目：{second_roll}")
-            #出た目の分、マスに加算
-            total_move += second_roll
-        #コマを進める
-        return total_move
 
 class Game():
     def __init__(self, players, goal: int):
