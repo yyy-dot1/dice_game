@@ -1,0 +1,10 @@
+# Python仮想環境
+.venv/
+venv/
+myenv/
+bin/
+
+# キャッシュや一時ファイル
+__pycache__/
+*.pyc
+.DS_Store
