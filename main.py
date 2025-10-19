@@ -9,7 +9,7 @@ class Dice():
         self.current_value: int = -1
 
     """
-    サイコロの目の値を管理する。
+    サイコロの目の値を管理しよう。
     """
     def roll(self):
         self.current_value = random.randint(self.min_val, self.max_val)
