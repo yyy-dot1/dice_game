@@ -1,7 +1,7 @@
 import random
 import time
 from abc import ABC, abstractmethod
-#サイコロの目の値を決めます
+#サイコロの目の値を決めます!
 class Dice():
     def __init__(self, min_val=1, max_val=6):
         self.min_val = min_val
